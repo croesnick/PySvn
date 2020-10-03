@@ -19,6 +19,7 @@ _STATUS_ENTRY = \
             'type_raw_name',
             'type',
             'revision',
+            'changelist',
         ])
 
 _FILE_HUNK_PREFIX = 'Index: '
@@ -308,27 +309,32 @@ class CommonClient(svn.common_base.CommonBase):
 
         list_ = root.findall('target/entry')
         for entry in list_:
-            entry_attr = entry.attrib
-            name = entry_attr['path']
+            yield from self.build_status(entry)
 
-            wcstatus = entry.find('wc-status')
-            wcstatus_attr = wcstatus.attrib
+        changelists = root.findall('changelist')
+        for changelist in changelists:
+            yield from self.build_status(changelist.find('entry'), changelist=changelist.attrib['name'])
 
-            change_type_raw = wcstatus_attr['item']
-            change_type = svn.constants.STATUS_TYPE_LOOKUP[change_type_raw]
 
-            # This will be absent if the file is "unversioned". It'll be "-1"
-            # if added but not committed.
-            revision = wcstatus_attr.get('revision')
-            if revision is not None:
-                revision = int(revision)
-
-            yield _STATUS_ENTRY(
-                name=name,
-                type_raw_name=change_type_raw,
-                type=change_type,
-                revision=revision
-            )
+    def build_status(self, entry, changelist=None):
+        entry_attr = entry.attrib
+        name = entry_attr['path']
+        wcstatus = entry.find('wc-status')
+        wcstatus_attr = wcstatus.attrib
+        change_type_raw = wcstatus_attr['item']
+        change_type = svn.constants.STATUS_TYPE_LOOKUP[change_type_raw]
+        # This will be absent if the file is "unversioned". It'll be "-1"
+        # if added but not committed.
+        revision = wcstatus_attr.get('revision')
+        if revision is not None:
+            revision = int(revision)
+        yield _STATUS_ENTRY(
+            name=name,
+            type_raw_name=change_type_raw,
+            type=change_type,
+            revision=revision,
+            changelist=changelist,
+        )
 
     def list(self, extended=False, rel_path=None):
         full_url_or_path = self.__url_or_path
