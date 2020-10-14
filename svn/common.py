@@ -336,23 +336,29 @@ class CommonClient(svn.common_base.CommonBase):
             changelist=changelist,
         )
 
-    def list(self, extended=False, rel_path=None):
+    def list(self, extended=False, rel_path=None, revision=None):
         full_url_or_path = self.__url_or_path
         if rel_path is not None:
             full_url_or_path += '/' + rel_path
+            
+        cmd = []
+        if revision is not None:
+            cmd += ['-r', str(revision)]
 
         if extended is False:
+            cmd += [full_url_or_path]
             for line in self.run_command(
                     'ls',
-                    [full_url_or_path]):
+                    cmd):
                 line = line.strip()
                 if line:
                     yield line
 
         else:
+            cmd += ['--xml', full_url_or_path]
             raw = self.run_command(
                 'ls',
-                ['--xml', full_url_or_path],
+                cmd,
                 do_combine=True)
 
             root = xml.etree.ElementTree.fromstring(raw)
